@@ -8,6 +8,7 @@ import { RoleBadge } from '@/components/badges';
 
 export default function UsersPage() {
   const me = getStoredUser<User>();
+  const isAdmin = me?.role === 'ADMIN';
   const [users, setUsers] = useState<User[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -19,10 +20,6 @@ export default function UsersPage() {
   });
   const [saving, setSaving] = useState(false);
 
-  if (me?.role !== 'ADMIN') {
-    return <div className="rounded-md bg-red-50 p-3 text-red-700">Admins only.</div>;
-  }
-
   async function load() {
     try {
       const data = await api.get<{ users: User[] }>('/users');
@@ -33,9 +30,13 @@ export default function UsersPage() {
   }
 
   useEffect(() => {
-    load();
+    if (isAdmin) load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return <div className="rounded-md bg-red-50 p-3 text-red-700">Admins only.</div>;
+  }
 
   async function create(e: React.FormEvent) {
     e.preventDefault();
