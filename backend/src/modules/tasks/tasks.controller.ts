@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { Role } from '@prisma/client';
+import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { forbidden, notFound } from '../../utils/httpError.js';
 import {

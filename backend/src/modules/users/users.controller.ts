@@ -1,13 +1,14 @@
 import { Request, Response } from 'express';
 import { Role } from '@prisma/client';
-import { prisma } from '../db/prisma.js';
-import { hashPassword } from '../utils/password.js';
-import { conflict, notFound } from '../utils/httpError.js';
+import { prisma } from '../../db/prisma.js';
+import { hashPassword } from '../../utils/password.js';
+import { conflict, notFound } from '../../utils/httpError.js';
+import { z } from 'zod';
 import {
   createUserSchema,
   updateUserSchema,
   idParamSchema,
-} from '../validators/schemas.js';
+} from '../../validators/schemas.js';
 
 function publicUser(u: {
   id: string;

@@ -1,6 +1,6 @@
 import { Role } from '@prisma/client';
-import { prisma } from '../db/prisma.js';
-import { forbidden, notFound } from '../utils/httpError.js';
+import { prisma } from '../../db/prisma.js';
+import { forbidden, notFound } from '../../utils/httpError.js';
 
 /**
  * Returns the project if the requesting user is permitted to VIEW it:

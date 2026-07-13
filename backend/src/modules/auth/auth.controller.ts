@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
-import { prisma } from '../db/prisma.js';
-import { comparePassword, hashPassword } from '../utils/password.js';
-import { signToken } from '../utils/jwt.js';
-import { badRequest, unauthorized, notFound } from '../utils/httpError.js';
-import { loginSchema } from '../validators/schemas.js';
+import { prisma } from '../../db/prisma.js';
+import { comparePassword, hashPassword } from '../../utils/password.js';
+import { signToken } from '../../utils/jwt.js';
+import { badRequest, unauthorized, notFound } from '../../utils/httpError.js';
+import { loginSchema } from '../../validators/schemas.js';
+import { z } from 'zod';
 
 function publicUser(user: { id: string; email: string; name: string; role: string; isActive: boolean; createdAt: Date }) {
   return {
