@@ -119,6 +119,39 @@ async function main() {
     },
   });
 
+  // --- Notifications ---
+  await prisma.notification.create({
+    data: {
+      userId: member1.id,
+      type: 'TASK_ASSIGNED',
+      title: 'New task assigned',
+      message: 'You have been assigned to "Design homepage mockups"',
+      entityId: task1.id,
+    },
+  });
+
+  await prisma.notification.create({
+    data: {
+      userId: pm.id,
+      type: 'COMMENT_ADDED',
+      title: 'New comment on your task',
+      message: 'Alice commented on "Set up CI pipeline"',
+      entityId: 'seed-task-2',
+    },
+  });
+
+  // --- Attachment ---
+  await prisma.attachment.create({
+    data: {
+      filename: 'homepage-mockup-v1.png',
+      mimeType: 'image/png',
+      size: 245000,
+      url: 'https://example.com/homepage-mockup-v1.png',
+      taskId: task1.id,
+      uploadedById: member1.id,
+    },
+  });
+
   console.log('Seed completed.');
   console.log('Login credentials (password for all): Password123!)');
   console.log('  ADMIN           : admin@cyphlab.com');
