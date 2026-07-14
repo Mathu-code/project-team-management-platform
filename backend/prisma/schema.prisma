@@ -57,6 +57,8 @@ model User {
   assignedTasks Task[]           @relation("TaskAssignee")
   createdTasks  Task[]           @relation("TaskCreator")
   comments      Comment[]
+  notifications Notification[]
+  attachments   Attachment[]
 }
 
 model Project {
@@ -104,6 +106,7 @@ model Task {
   updatedAt   DateTime      @updatedAt
 
   comments Comment[]
+  attachments Attachment[]
 
   @@index([projectId])
   @@index([assigneeId])
@@ -116,6 +119,42 @@ model Comment {
   task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  read      Boolean          @default(false)
+  entityId  String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read])
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  COMMENT_ADDED
+  PROJECT_UPDATED
+}
+
+model Attachment {
+  id        String   @id @default(cuid())
+  filename  String
+  mimeType  String
+  size      Int
+  url       String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy User    @relation(fields: [uploadedById], references: [id])
   createdAt DateTime @default(now())
 
   @@index([taskId])
