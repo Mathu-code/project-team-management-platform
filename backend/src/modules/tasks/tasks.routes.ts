@@ -7,8 +7,10 @@ import {
   taskIdParamSchema,
   taskListQuerySchema,
   myTasksQuerySchema,
+  createAttachmentSchema,
 } from '../../validators/schemas.js';
 import * as controller from './tasks.controller.js';
+import * as attachmentController from '../attachments/attachments.controller.js';
 
 const router = Router();
 
@@ -31,5 +33,15 @@ router.post(
   validate(createCommentSchema),
   asyncHandler(controller.addComment),
 );
+
+// Attachment routes nested under tasks.
+router.get('/tasks/:taskId/attachments', validate(taskIdParamSchema, 'params'), asyncHandler(attachmentController.listAttachments));
+router.post(
+  '/tasks/:taskId/attachments',
+  validate(taskIdParamSchema, 'params'),
+  validate(createAttachmentSchema),
+  asyncHandler(attachmentController.createAttachment),
+);
+router.delete('/tasks/:taskId/attachments/:attachmentId', validate(taskIdParamSchema, 'params'), asyncHandler(attachmentController.deleteAttachment));
 
 export default router;

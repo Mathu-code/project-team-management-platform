@@ -9,6 +9,7 @@ import {
   projectIdParamSchema,
   memberIdParamSchema,
   createTaskSchema,
+  taskListQuerySchema,
 } from '../../validators/schemas.js';
 import * as controller from './projects.controller.js';
 import * as taskController from '../tasks/tasks.controller.js';
@@ -35,7 +36,6 @@ router.patch(
   asyncHandler(controller.updateProject),
 );
 router.delete('/:projectId', validate(projectIdParamSchema, 'params'), asyncHandler(controller.deleteProject));
-
 router.get('/:projectId/members', validate(projectIdParamSchema, 'params'), asyncHandler(controller.listMembers));
 router.get('/:projectId/available-users', validate(projectIdParamSchema, 'params'), asyncHandler(controller.listAvailableUsers));
 router.post(
@@ -51,7 +51,7 @@ router.delete(
 );
 
 // Project-scoped task routes.
-router.get('/:projectId/tasks', validate(projectIdParamSchema, 'params'), asyncHandler(taskController.listTasks));
+router.get('/:projectId/tasks', validate(projectIdParamSchema, 'params'), validate(taskListQuerySchema, 'query'), asyncHandler(taskController.listTasks));
 router.post(
   '/:projectId/tasks',
   validate(projectIdParamSchema, 'params'),
@@ -60,3 +60,4 @@ router.post(
 );
 
 export default router;
+
