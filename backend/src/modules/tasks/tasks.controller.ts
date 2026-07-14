@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Role, TaskStatus, TaskPriority } from '@prisma/client';
+import { Role, TaskStatus } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { forbidden, notFound } from '../../utils/httpError.js';

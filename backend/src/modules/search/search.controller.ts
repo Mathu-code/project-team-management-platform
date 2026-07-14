@@ -1,10 +1,10 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { searchQuerySchema } from '../../validators/schemas.js';
 
 export async function search(req: Request, res: Response) {
   const query = req.query as z.infer<typeof searchQuerySchema>;
-  const term = `%${query.q.toLowerCase()}%`;
   const type = query.type ?? 'all';
 
   const [users, projects] = await Promise.all([

@@ -5,7 +5,6 @@ import {
   updateTaskSchema,
   createCommentSchema,
   taskIdParamSchema,
-  taskListQuerySchema,
   myTasksQuerySchema,
   createAttachmentSchema,
 } from '../../validators/schemas.js';

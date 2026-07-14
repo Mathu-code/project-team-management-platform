@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { notFound } from '../../utils/httpError.js';
 import { notificationsQuerySchema } from '../../validators/schemas.js';

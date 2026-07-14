@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Role, TaskStatus, TaskPriority } from '@prisma/client';
+import { Role, TaskStatus } from '@prisma/client';
 import { prisma } from '../../db/prisma.js';
 import { getViewableProject } from '../projects/projectAccess.js';
 
