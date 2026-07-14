@@ -6,6 +6,15 @@ import { getStoredUser } from '@/lib/auth';
 import { User, Role, ROLES } from '@/lib/types';
 import { RoleBadge } from '@/components/badges';
 
+function formatError(e: unknown): string {
+  if (e instanceof ApiError && e.details) {
+    const details = e.details as Record<string, string[]>;
+    const parts = Object.entries(details).map(([field, msgs]) => `${field}: ${msgs.join(', ')}`);
+    if (parts.length) return parts.join('  •  ');
+  }
+  return e instanceof ApiError ? e.message : 'Request failed';
+}
+
 export default function UsersPage() {
   const me = getStoredUser<User>();
   const isAdmin = me?.role === 'ADMIN';
@@ -48,7 +57,7 @@ export default function UsersPage() {
       setShowForm(false);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to create user');
+      setError(formatError(e));
     } finally {
       setSaving(false);
     }
@@ -59,7 +68,7 @@ export default function UsersPage() {
       await api.patch(`/users/${u.id}`, patch);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to update');
+      setError(formatError(e));
     }
   }
 
@@ -70,7 +79,7 @@ export default function UsersPage() {
       await api.delete(`/users/${u.id}`);
       await load();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Failed to delete');
+      setError(formatError(e));
     }
   }
 
@@ -102,6 +111,9 @@ export default function UsersPage() {
             <label className="block text-sm font-medium text-slate-700">Password</label>
             <input required type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })}
               className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
+            <p className="mt-1 text-xs text-slate-400">
+              Min 8 characters, with at least one uppercase letter, one lowercase letter, and one number.
+            </p>
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700">Role</label>
