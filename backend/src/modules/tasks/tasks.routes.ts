@@ -13,6 +13,7 @@ const router = Router();
 router.use(requireAuth);
 
 // Task-scoped routes.
+router.get('/tasks/mine', asyncHandler(controller.getMyTasks));
 router.get('/tasks/:taskId', validate(taskIdParamSchema, 'params'), asyncHandler(controller.getTask));
 router.patch(
   '/tasks/:taskId',

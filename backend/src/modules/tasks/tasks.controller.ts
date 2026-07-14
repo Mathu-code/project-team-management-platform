@@ -134,6 +134,15 @@ export async function deleteTask(req: Request, res: Response) {
   res.json({ message: 'Task deleted' });
 }
 
+export async function getMyTasks(req: Request, res: Response) {
+  const tasks = await prisma.task.findMany({
+    where: { assigneeId: req.user!.userId },
+    include: taskInclude,
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json({ tasks });
+}
+
 export async function listComments(req: Request, res: Response) {
   const { taskId } = req.params as z.infer<typeof taskIdParamSchema>;
   const task = await prisma.task.findUnique({ where: { id: taskId } });

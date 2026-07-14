@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
 import { getStoredUser } from '@/lib/auth';
-import { Project, Task, User, TaskStatus, TASK_STATUSES } from '@/lib/types';
+import { Task, User, TaskStatus, TASK_STATUSES } from '@/lib/types';
 import { Badge } from '@/components/badges';
 
 export default function MyTasksPage() {
@@ -15,14 +15,8 @@ export default function MyTasksPage() {
 
   async function load() {
     try {
-      const data = await api.get<{ projects: Project[] }>('/projects');
-      const mine: Task[] = [];
-      for (const p of data.projects) {
-        for (const t of p.tasks ?? []) {
-          if (t.assigneeId === user?.id) mine.push(t);
-        }
-      }
-      setTasks(mine);
+      const data = await api.get<{ tasks: Task[] }>('/tasks/mine');
+      setTasks(data.tasks);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to load tasks');
     }
