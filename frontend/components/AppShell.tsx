@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { getToken, getStoredUser, clearSession } from '@/lib/auth';
 import { User, Role, Notification } from '@/lib/types';
 import { api, ApiError } from '@/lib/api';
-import { Badge } from './badges';
+import { Badge, RoleBadge } from './badges';
 
 function navItems(role: Role) {
   const items: { href: string; label: string }[] = [
