@@ -5,6 +5,8 @@ export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'REVIEW' | 'DONE';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 export type MemberRole = 'MANAGER' | 'MEMBER';
 
+export type NotificationType = 'TASK_ASSIGNED' | 'TASK_UPDATED' | 'COMMENT_ADDED' | 'PROJECT_UPDATED';
+
 export interface User {
   id: string;
   email: string;
@@ -55,6 +57,8 @@ export interface Task {
   createdAt: string;
   updatedAt: string;
   comments?: Comment[];
+  attachments?: Attachment[];
+  isOverdue?: boolean;
 }
 
 export interface Comment {
@@ -66,12 +70,57 @@ export interface Comment {
   createdAt: string;
 }
 
+export interface Attachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  taskId: string;
+  uploadedById: string;
+  uploadedBy?: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  type: NotificationType;
+  title: string;
+  message: string;
+  read: boolean;
+  entityId?: string;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   role: Role;
   stats: Record<string, number>;
+}
+
+export interface ProjectAnalytics {
+  projectId: string;
+  total: number;
+  completed: number;
+  completionRate: number;
+  overdue: number;
+  tasksByStatus: Record<string, number>;
+  tasksByPriority: Record<string, number>;
+}
+
+export interface GlobalAnalytics {
+  role: Role;
+  total: number;
+  completed: number;
+  completionRate: number;
+  overdue: number;
+  tasksByStatus: Record<string, number>;
+  tasksByPriority: Record<string, number>;
+  byAssignee: Record<string, { name: string; count: number }>;
 }
 
 export const PROJECT_STATUSES: ProjectStatus[] = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'COMPLETED'];
 export const TASK_STATUSES: TaskStatus[] = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
 export const TASK_PRIORITIES: TaskPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 export const ROLES: Role[] = ['ADMIN', 'PROJECT_MANAGER', 'TEAM_MEMBER'];
+export const NOTIFICATION_TYPES: NotificationType[] = ['TASK_ASSIGNED', 'TASK_UPDATED', 'COMMENT_ADDED', 'PROJECT_UPDATED'];

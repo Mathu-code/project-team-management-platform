@@ -10,6 +10,7 @@ import {
   Task,
   User,
   Comment,
+  Attachment,
   TaskStatus,
   TaskPriority,
   TASK_STATUSES,
@@ -28,6 +29,17 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<TaskStatus | ''>('');
+  const [priorityFilter, setPriorityFilter] = useState<TaskPriority | ''>('');
+  const [searchFilter, setSearchFilter] = useState('');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [showOverdue, setShowOverdue] = useState(false);
+  const [showAttachForm, setShowAttachForm] = useState(false);
+  const [attachForm, setAttachForm] = useState({ filename: '', mimeType: 'image/png', size: 0, url: '' });
 
   const isManager =
     user?.role === 'ADMIN' || project?.createdById === user?.id;
@@ -42,10 +54,31 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function loadTasks() {
+    try {
+      const q: Record<string, string> = {};
+      if (statusFilter) q.status = statusFilter;
+      if (priorityFilter) q.priority = priorityFilter;
+      if (searchFilter) q.search = searchFilter;
+      if (sortBy) q.sortBy = sortBy;
+      if (sortOrder) q.sortOrder = sortOrder;
+      if (showOverdue) q.overdue = 'true';
+      const data = await api.get<{ tasks: Task[] }>(`/projects/${projectId}/tasks`, q);
+      setTasks(data.tasks);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to load tasks');
+    }
+  }
+
   useEffect(() => {
     loadProject();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  useEffect(() => {
+    if (project) loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, priorityFilter, searchFilter, sortBy, sortOrder, showOverdue]);
 
   async function loadAvailable() {
     if (!isManager) return;
@@ -89,7 +122,7 @@ export default function ProjectDetailPage() {
         priority: form.priority,
         assigneeId: form.assigneeId || null,
       });
-      await loadProject();
+      await loadTasks();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to create task');
     }
@@ -97,10 +130,12 @@ export default function ProjectDetailPage() {
 
   async function openTask(task: Task) {
     setSelectedTask(task);
+    setShowAttachForm(false);
     try {
       const data = await api.get<{ task: Task }>(`/tasks/${task.id}`);
       setSelectedTask(data.task);
       setComments(data.task.comments ?? []);
+      setAttachments(data.task.attachments ?? []);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to load task');
     }
@@ -111,7 +146,7 @@ export default function ProjectDetailPage() {
     try {
       const data = await api.patch<{ task: Task }>(`/tasks/${selectedTask.id}`, { status });
       setSelectedTask(data.task);
-      await loadProject();
+      await loadTasks();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'Failed to update task');
     }
@@ -129,6 +164,42 @@ export default function ProjectDetailPage() {
     }
   }
 
+  async function addAttachment() {
+    if (!selectedTask || !attachForm.filename || !attachForm.url) return;
+    try {
+      await api.post(`/tasks/${selectedTask.id}/attachments`, attachForm);
+      setShowAttachForm(false);
+      setAttachForm({ filename: '', mimeType: 'image/png', size: 0, url: '' });
+      const data = await api.get<{ task: Task }>(`/tasks/${selectedTask.id}`);
+      setSelectedTask(data.task);
+      setAttachments(data.task.attachments ?? []);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to add attachment');
+    }
+  }
+
+  async function deleteAttachment(attachmentId: string) {
+    if (!selectedTask) return;
+    try {
+      await api.delete(`/tasks/${selectedTask.id}/attachments/${attachmentId}`);
+      const data = await api.get<{ task: Task }>(`/tasks/${selectedTask.id}`);
+      setSelectedTask(data.task);
+      setAttachments(data.task.attachments ?? []);
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'Failed to delete attachment');
+    }
+  }
+
+  const isOverdue = (dueDate: string | null, status: TaskStatus) => {
+    if (!dueDate || status === 'DONE') return false;
+    return new Date(dueDate) < new Date();
+  };
+
+  const statusCounts: Record<string, number> = {};
+  for (const t of tasks) {
+    statusCounts[t.status] = (statusCounts[t.status] || 0) + 1;
+  }
+
   if (error) return <div className="rounded-md bg-red-50 p-3 text-red-700">{error}</div>;
   if (!project) return <div className="text-slate-400">Loading…</div>;
 
@@ -144,6 +215,15 @@ export default function ProjectDetailPage() {
           <p className="mt-1 text-sm text-slate-500">{project.description ?? 'No description'}</p>
         </div>
         <Badge label={project.status} kind="project" />
+      </div>
+
+      {/* Status Summary */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {TASK_STATUSES.map((s) => (
+          <span key={s} className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+            {s}: {statusCounts[s] || 0}
+          </span>
+        ))}
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -187,6 +267,42 @@ export default function ProjectDetailPage() {
         <section className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm lg:col-span-2">
           <h2 className="font-semibold text-slate-800">Tasks ({tasks.length})</h2>
 
+          {/* Filters */}
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as TaskStatus | '')}
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="">All Statuses</option>
+              {TASK_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+            <select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value as TaskPriority | '')}
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="">All Priorities</option>
+              {TASK_PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+            </select>
+            <input
+              value={searchFilter}
+              onChange={(e) => setSearchFilter(e.target.value)}
+              placeholder="Search tasks..."
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+            />
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="createdAt">Sort: Created</option>
+              <option value="dueDate">Sort: Due Date</option>
+              <option value="priority">Sort: Priority</option>
+              <option value="status">Sort: Status</option>
+            </select>
+            <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value)}
+              className="rounded-md border border-slate-300 px-2 py-1.5 text-sm">
+              <option value="desc">Desc</option>
+              <option value="asc">Asc</option>
+            </select>
+            <label className="flex items-center gap-1 text-sm text-slate-600">
+              <input type="checkbox" checked={showOverdue} onChange={(e) => setShowOverdue(e.target.checked)} />
+              Overdue
+            </label>
+          </div>
+
           {isManager && (
             <CreateTaskForm
               members={project.members ?? []}
@@ -199,7 +315,12 @@ export default function ProjectDetailPage() {
               <li key={t.id}>
                 <button onClick={() => openTask(t)}
                   className="flex w-full items-center justify-between py-3 text-left text-sm hover:bg-slate-50">
-                  <span className="font-medium text-slate-800">{t.title}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-slate-800">{t.title}</span>
+                    {isOverdue(t.dueDate, t.status) && (
+                      <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Overdue</span>
+                    )}
+                  </div>
                   <span className="flex items-center gap-2">
                     <Badge label={t.priority} kind="priority" />
                     <Badge label={t.status} kind="task" />
@@ -207,7 +328,7 @@ export default function ProjectDetailPage() {
                 </button>
               </li>
             ))}
-            {tasks.length === 0 && <li className="py-3 text-sm text-slate-500">No tasks yet.</li>}
+            {tasks.length === 0 && <li className="py-3 text-sm text-slate-500">No tasks match the current filters.</li>}
           </ul>
         </section>
       </div>
@@ -216,11 +337,18 @@ export default function ProjectDetailPage() {
         <TaskDrawer
           task={selectedTask}
           comments={comments}
+          attachments={attachments}
           isManager={!!isManager}
           canUpdate={isManager || selectedTask.assigneeId === user?.id}
-          onClose={() => setSelectedTask(null)}
+          onClose={() => { setSelectedTask(null); setShowAttachForm(false); }}
           onStatus={updateTaskStatus}
           onComment={addComment}
+          onAddAttachment={addAttachment}
+          onDeleteAttachment={deleteAttachment}
+          showAttachForm={showAttachForm}
+          setShowAttachForm={setShowAttachForm}
+          attachForm={attachForm}
+          setAttachForm={setAttachForm}
         />
       )}
     </div>
@@ -275,21 +403,36 @@ function CreateTaskForm({
 function TaskDrawer({
   task,
   comments,
+  attachments,
   isManager,
   canUpdate,
   onClose,
   onStatus,
   onComment,
+  onAddAttachment,
+  onDeleteAttachment,
+  showAttachForm,
+  setShowAttachForm,
+  attachForm,
+  setAttachForm,
 }: {
   task: Task;
   comments: Comment[];
+  attachments: Attachment[];
   isManager: boolean;
   canUpdate: boolean;
   onClose: () => void;
   onStatus: (s: TaskStatus) => void;
   onComment: (c: string) => void;
+  onAddAttachment: () => void;
+  onDeleteAttachment: (id: string) => void;
+  showAttachForm: boolean;
+  setShowAttachForm: (v: boolean) => void;
+  attachForm: { filename: string; mimeType: string; size: number; url: string };
+  setAttachForm: (f: { filename: string; mimeType: string; size: number; url: string }) => void;
 }) {
   const [text, setText] = useState('');
+  const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
@@ -299,6 +442,10 @@ function TaskDrawer({
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">✕</button>
         </div>
         <p className="mt-2 text-sm text-slate-500">{task.description ?? 'No description'}</p>
+
+        {isOverdue && (
+          <div className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">Overdue — due {new Date(task.dueDate!).toLocaleDateString()}</div>
+        )}
 
         <div className="mt-4 flex items-center gap-2">
           <span className="text-sm text-slate-600">Status:</span>
@@ -316,6 +463,47 @@ function TaskDrawer({
         <p className="mt-2 text-xs text-slate-400">
           Assignee: {task.assignee?.name ?? 'Unassigned'}
         </p>
+        <p className="mt-1 text-xs text-slate-400">
+          Due: {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'None'}
+        </p>
+
+        <h4 className="mt-6 font-semibold text-slate-700">Attachments</h4>
+        <ul className="mt-2 space-y-2">
+          {attachments.map((a) => (
+            <li key={a.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
+              <a href={a.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline truncate">
+                {a.filename}
+              </a>
+              <span className="text-xs text-slate-400">{a.uploadedBy?.name}</span>
+              {(isManager || a.uploadedById === task.assigneeId) && (
+                <button onClick={() => onDeleteAttachment(a.id)} className="text-xs text-red-600 hover:underline">Delete</button>
+              )}
+            </li>
+          ))}
+          {attachments.length === 0 && <li className="text-sm text-slate-400">No attachments.</li>}
+        </ul>
+
+        {(isManager || task.assigneeId === task.createdById) && (
+          <div className="mt-3">
+            {!showAttachForm ? (
+              <button onClick={() => setShowAttachForm(true)} className="text-sm text-brand-600 hover:underline">+ Add attachment</button>
+            ) : (
+              <form onSubmit={(e) => { e.preventDefault(); onAddAttachment(); }}
+                className="mt-2 flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-3">
+                <input required placeholder="Filename" value={attachForm.filename}
+                  onChange={(e) => setAttachForm({ ...attachForm, filename: e.target.value })}
+                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                <input required placeholder="URL" value={attachForm.url}
+                  onChange={(e) => setAttachForm({ ...attachForm, url: e.target.value })}
+                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                <input type="number" required placeholder="Size (bytes)" value={attachForm.size}
+                  onChange={(e) => setAttachForm({ ...attachForm, size: parseInt(e.target.value) || 0 })}
+                  className="w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
+                <button className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700">Save</button>
+              </form>
+            )}
+          </div>
+        )}
 
         <h4 className="mt-6 font-semibold text-slate-700">Comments</h4>
         <ul className="mt-2 space-y-2">
