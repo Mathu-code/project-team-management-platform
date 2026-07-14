@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { Role } from '@prisma/client';
+import { Role, TaskStatus, TaskPriority } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { forbidden, notFound } from '../../utils/httpError.js';
@@ -9,6 +9,8 @@ import {
   createCommentSchema,
   projectIdParamSchema,
   taskIdParamSchema,
+  taskListQuerySchema,
+  myTasksQuerySchema,
 } from '../../validators/schemas.js';
 import { assertProjectManager, getViewableProject } from '../projects/projectAccess.js';
 
@@ -18,13 +20,44 @@ const taskInclude = {
   project: { select: { id: true, name: true } },
 };
 
+function buildTaskWhere(projectId: string, query: z.infer<typeof taskListQuerySchema>) {
+  const where: Record<string, unknown> = { projectId };
+  if (query.status) where.status = query.status;
+  if (query.priority) where.priority = query.priority;
+  if (query.assigneeId) where.assigneeId = query.assigneeId;
+  if (query.search) {
+    where.OR = [
+      { title: { contains: query.search, mode: 'insensitive' } },
+      { description: { contains: query.search, mode: 'insensitive' } },
+    ];
+  }
+  if (query.overdue === 'true') {
+    where.dueDate = { lt: new Date() };
+    where.status = { not: TaskStatus.DONE };
+  } else if (query.overdue === 'false') {
+    where.OR = [{ dueDate: null }, { dueDate: { gte: new Date() } }];
+  }
+  return where;
+}
+
+function buildTaskOrderBy(query: z.infer<typeof taskListQuerySchema>): Record<string, string> {
+  const sortBy = query.sortBy ?? 'createdAt';
+  const sortOrder = query.sortOrder ?? 'desc';
+  return { [sortBy]: sortOrder };
+}
+
 export async function listTasks(req: Request, res: Response) {
   const { projectId } = req.params as z.infer<typeof projectIdParamSchema>;
   await getViewableProject(projectId, req.user!.userId, req.user!.role);
+  const query = req.query as z.infer<typeof taskListQuerySchema>;
+
+  const where = buildTaskWhere(projectId, query);
+  const orderBy = buildTaskOrderBy(query);
+
   const tasks = await prisma.task.findMany({
-    where: { projectId },
+    where,
     include: taskInclude,
-    orderBy: { createdAt: 'desc' },
+    orderBy,
   });
   res.json({ tasks });
 }
@@ -55,6 +88,19 @@ export async function createTask(req: Request, res: Response) {
     },
     include: taskInclude,
   });
+
+  if (data.assigneeId) {
+    await prisma.notification.create({
+      data: {
+        userId: data.assigneeId,
+        type: 'TASK_ASSIGNED',
+        title: 'New task assigned',
+        message: `You have been assigned to "${task.title}"`,
+        entityId: task.id,
+      },
+    });
+  }
+
   res.status(201).json({ task });
 }
 
@@ -71,6 +117,10 @@ export async function getTask(req: Request, res: Response) {
       comments: {
         orderBy: { createdAt: 'asc' },
         include: { user: { select: { id: true, name: true } } },
+      },
+      attachments: {
+        orderBy: { createdAt: 'desc' },
+        include: { uploadedBy: { select: { id: true, name: true } } },
       },
     },
   });
@@ -109,6 +159,7 @@ export async function updateTask(req: Request, res: Response) {
     if (!member) throw forbidden('Assignee must be a member of the project');
   }
 
+  const previousAssigneeId = task.assigneeId;
   const updated = await prisma.task.update({
     where: { id: taskId },
     data: {
@@ -121,6 +172,19 @@ export async function updateTask(req: Request, res: Response) {
     },
     include: taskInclude,
   });
+
+  if (data.assigneeId && data.assigneeId !== previousAssigneeId) {
+    await prisma.notification.create({
+      data: {
+        userId: data.assigneeId,
+        type: 'TASK_ASSIGNED',
+        title: 'Task reassigned',
+        message: `You have been assigned to "${updated.title}"`,
+        entityId: updated.id,
+      },
+    });
+  }
+
   res.json({ task: updated });
 }
 
@@ -135,10 +199,31 @@ export async function deleteTask(req: Request, res: Response) {
 }
 
 export async function getMyTasks(req: Request, res: Response) {
+  const query = req.query as z.infer<typeof myTasksQuerySchema>;
+  const where: Record<string, unknown> = { assigneeId: req.user!.userId };
+  if (query.status) where.status = query.status;
+  if (query.priority) where.priority = query.priority;
+  if (query.search) {
+    where.OR = [
+      { title: { contains: query.search, mode: 'insensitive' } },
+      { description: { contains: query.search, mode: 'insensitive' } },
+    ];
+  }
+  if (query.overdue === 'true') {
+    where.dueDate = { lt: new Date() };
+    where.status = { not: TaskStatus.DONE };
+  } else if (query.overdue === 'false') {
+    where.OR = [{ dueDate: null }, { dueDate: { gte: new Date() } }];
+  }
+
+  const sortBy = query.sortBy ?? 'createdAt';
+  const sortOrder = query.sortOrder ?? 'desc';
+  const orderBy = { [sortBy]: sortOrder } as Record<string, string>;
+
   const tasks = await prisma.task.findMany({
-    where: { assigneeId: req.user!.userId },
+    where,
     include: taskInclude,
-    orderBy: { createdAt: 'desc' },
+    orderBy,
   });
   res.json({ tasks });
 }
@@ -166,5 +251,21 @@ export async function addComment(req: Request, res: Response) {
     data: { content: data.content, taskId, userId: req.user!.userId },
     include: { user: { select: { id: true, name: true } } },
   });
+
+  const projectMembers = await prisma.projectMember.findMany({
+    where: { projectId: task.projectId, userId: { not: req.user!.userId } },
+  });
+  for (const member of projectMembers) {
+    await prisma.notification.create({
+      data: {
+        userId: member.userId,
+        type: 'COMMENT_ADDED',
+        title: 'New comment',
+        message: `A new comment was added on "${task.title}"`,
+        entityId: taskId,
+      },
+    });
+  }
+
   res.status(201).json({ comment });
 }

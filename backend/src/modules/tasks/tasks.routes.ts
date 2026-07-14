@@ -5,6 +5,8 @@ import {
   updateTaskSchema,
   createCommentSchema,
   taskIdParamSchema,
+  taskListQuerySchema,
+  myTasksQuerySchema,
 } from '../../validators/schemas.js';
 import * as controller from './tasks.controller.js';
 
@@ -13,7 +15,7 @@ const router = Router();
 router.use(requireAuth);
 
 // Task-scoped routes.
-router.get('/tasks/mine', asyncHandler(controller.getMyTasks));
+router.get('/tasks/mine', validate(myTasksQuerySchema, 'query'), asyncHandler(controller.getMyTasks));
 router.get('/tasks/:taskId', validate(taskIdParamSchema, 'params'), asyncHandler(controller.getTask));
 router.patch(
   '/tasks/:taskId',

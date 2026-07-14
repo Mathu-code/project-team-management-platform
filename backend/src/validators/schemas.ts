@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { Role, ProjectStatus, TaskStatus, TaskPriority, MemberRole } from '@prisma/client';
+import { Role, ProjectStatus, TaskStatus, TaskPriority, MemberRole, NotificationType } from '@prisma/client';
 
 export const loginSchema = z.object({
   email: z.string().email('Invalid email'),
@@ -68,6 +68,13 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment cannot be empty').max(2000),
 });
 
+export const createAttachmentSchema = z.object({
+  filename: z.string().min(1, 'Filename is required').max(255),
+  mimeType: z.string().min(1, 'Mime type is required').max(100),
+  size: z.number().int().positive('Size must be positive'),
+  url: z.string().url('Invalid URL'),
+});
+
 export const idParamSchema = z.object({
   id: z.string().min(1),
 });
@@ -83,4 +90,37 @@ export const taskIdParamSchema = z.object({
 export const memberIdParamSchema = z.object({
   projectId: z.string().min(1),
   userId: z.string().min(1),
+});
+
+export const taskListQuerySchema = z.object({
+  status: z.nativeEnum(TaskStatus).optional(),
+  priority: z.nativeEnum(TaskPriority).optional(),
+  assigneeId: z.string().optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'dueDate', 'priority', 'status']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  overdue: z.enum(['true', 'false']).optional(),
+});
+
+export const myTasksQuerySchema = z.object({
+  status: z.nativeEnum(TaskStatus).optional(),
+  priority: z.nativeEnum(TaskPriority).optional(),
+  search: z.string().optional(),
+  sortBy: z.enum(['createdAt', 'dueDate', 'priority', 'status']).optional(),
+  sortOrder: z.enum(['asc', 'desc']).optional(),
+  overdue: z.enum(['true', 'false']).optional(),
+});
+
+export const notificationsQuerySchema = z.object({
+  read: z.enum(['true', 'false']).optional(),
+  type: z.nativeEnum(NotificationType).optional(),
+});
+
+export const searchQuerySchema = z.object({
+  q: z.string().min(1, 'Search query is required'),
+  type: z.enum(['users', 'projects', 'all']).optional(),
+});
+
+export const analyticsQuerySchema = z.object({
+  range: z.enum(['7d', '30d', '90d']).optional(),
 });
