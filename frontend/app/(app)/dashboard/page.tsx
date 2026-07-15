@@ -185,6 +185,25 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {/* Notifications */}
+      {notifications.length > 0 && (
+        <div className="mt-8">
+          <h2 className="font-semibold text-slate-800">Recent Notifications</h2>
+          <ul className="mt-4 space-y-3">
+            {notifications.map((n) => (
+              <li key={n.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-slate-800">{n.title}</span>
+                  <span className="text-xs text-slate-400">{new Date(n.createdAt).toLocaleString()}</span>
+                </div>
+                <p className="mt-1 text-sm text-slate-600">{n.message}</p>
+                {!n.read && <span className="mt-2 inline-block rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">Unread</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {/* Project Analytics Selector */}
       {projects.length > 0 && (
         <div className="mt-8">
