@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
+import path from 'path';
 
 import { env, corsOrigins } from './config/env.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
@@ -32,6 +33,8 @@ export function createApp(): Application {
   );
 
   app.use(env.API_PREFIX, apiRoutes);
+
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
   app.use(notFoundHandler);
   app.use(errorHandler);

@@ -68,13 +68,6 @@ export const createCommentSchema = z.object({
   content: z.string().min(1, 'Comment cannot be empty').max(2000),
 });
 
-export const createAttachmentSchema = z.object({
-  filename: z.string().min(1, 'Filename is required').max(255),
-  mimeType: z.string().min(1, 'Mime type is required').max(100),
-  size: z.number().int().positive('Size must be positive'),
-  url: z.string().url('Invalid URL'),
-});
-
 export const idParamSchema = z.object({
   id: z.string().min(1),
 });

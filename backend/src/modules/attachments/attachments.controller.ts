@@ -2,8 +2,9 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { prisma } from '../../db/prisma.js';
 import { notFound, forbidden } from '../../utils/httpError.js';
-import { createAttachmentSchema, taskIdParamSchema } from '../../validators/schemas.js';
+import { taskIdParamSchema } from '../../validators/schemas.js';
 import { getViewableProject } from '../projects/projectAccess.js';
+import { upload, getPublicUrl } from '../../utils/upload.js';
 
 export async function listAttachments(req: Request, res: Response) {
   const { taskId } = req.params as z.infer<typeof taskIdParamSchema>;
@@ -21,7 +22,6 @@ export async function listAttachments(req: Request, res: Response) {
 
 export async function createAttachment(req: Request, res: Response) {
   const { taskId } = req.params as z.infer<typeof taskIdParamSchema>;
-  const data = req.body as z.infer<typeof createAttachmentSchema>;
   const task = await prisma.task.findUnique({ where: { id: taskId } });
   if (!task) throw notFound('Task not found');
 
@@ -34,17 +34,33 @@ export async function createAttachment(req: Request, res: Response) {
     throw forbidden('You can only add attachments to tasks assigned to you');
   }
 
+  const file = req.file;
+  if (!file) {
+    throw forbidden('File is required');
+  }
+
   const attachment = await prisma.attachment.create({
     data: {
-      filename: data.filename,
-      mimeType: data.mimeType,
-      size: data.size,
-      url: data.url,
+      filename: file.originalname,
+      mimeType: file.mimetype,
+      size: file.size,
+      url: getPublicUrl(file.filename),
       taskId,
       uploadedById: userId,
     },
     include: { uploadedBy: { select: { id: true, name: true } } },
   });
+
+  await prisma.notification.create({
+    data: {
+      userId: task.assigneeId ?? task.createdById,
+      type: 'TASK_UPDATED',
+      title: 'New attachment added',
+      message: `A new file was attached to "${task.title}"`,
+      entityId: taskId,
+    },
+  });
+
   res.status(201).json({ attachment });
 }
 
