@@ -7,6 +7,7 @@ import {
   taskIdParamSchema,
   myTasksQuerySchema,
 } from '../../validators/schemas.js';
+import { upload } from '../../utils/upload.js';
 import * as controller from './tasks.controller.js';
 import * as attachmentController from '../attachments/attachments.controller.js';
 
@@ -37,7 +38,7 @@ router.get('/tasks/:taskId/attachments', validate(taskIdParamSchema, 'params'), 
 router.post(
   '/tasks/:taskId/attachments',
   validate(taskIdParamSchema, 'params'),
-  validate(createAttachmentSchema),
+  upload.single('file'),
   asyncHandler(attachmentController.createAttachment),
 );
 router.delete('/tasks/:taskId/attachments/:attachmentId', validate(taskIdParamSchema, 'params'), asyncHandler(attachmentController.deleteAttachment));
