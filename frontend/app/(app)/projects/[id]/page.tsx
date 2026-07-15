@@ -3,7 +3,7 @@
 import { use, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { api, ApiError } from '@/lib/api';
+import { api, ApiError, resolveUploadUrl } from '@/lib/api';
 import { getStoredUser, getToken } from '@/lib/auth';
 import { API_BASE } from '@/lib/api';
 import {
@@ -479,7 +479,7 @@ function TaskDrawer({
         <ul className="mt-2 space-y-2">
           {attachments.map((a) => (
             <li key={a.id} className="flex items-center justify-between rounded-md bg-slate-50 p-2 text-sm">
-              <a href={a.url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline truncate">
+              <a href={resolveUploadUrl(a.url)} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline truncate">
                 {a.filename}
               </a>
               <span className="text-xs text-slate-400">{a.uploadedBy?.name}</span>

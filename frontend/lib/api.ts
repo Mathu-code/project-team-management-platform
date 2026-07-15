@@ -51,3 +51,8 @@ export const api = {
     request<T>(path, { method: 'PATCH', body: data ? JSON.stringify(data) : undefined }),
   delete: <T,>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
+
+export function resolveUploadUrl(path: string): string {
+  const base = API_BASE.replace(/\/$/, '').replace(/\/api$/, '');
+  return `${base}${path}`;
+}
