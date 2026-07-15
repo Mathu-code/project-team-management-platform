@@ -1,7 +1,9 @@
 import ProjectDetailClient from './ProjectDetailClient';
 
+export const dynamic = 'force-static';
+
 export async function generateStaticParams() {
-  return [];
+  return [{ id: '1' }];
 }
 
 export default function Page({ params }: { params: { id: string } }) {
