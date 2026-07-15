@@ -6,7 +6,6 @@ import {
   createCommentSchema,
   taskIdParamSchema,
   myTasksQuerySchema,
-  createAttachmentSchema,
 } from '../../validators/schemas.js';
 import * as controller from './tasks.controller.js';
 import * as attachmentController from '../attachments/attachments.controller.js';
