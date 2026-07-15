@@ -4,7 +4,7 @@ import { prisma } from '../../db/prisma.js';
 import { notFound, forbidden } from '../../utils/httpError.js';
 import { taskIdParamSchema } from '../../validators/schemas.js';
 import { getViewableProject } from '../projects/projectAccess.js';
-import { upload, getPublicUrl } from '../../utils/upload.js';
+import { getPublicUrl } from '../../utils/upload.js';
 
 export async function listAttachments(req: Request, res: Response) {
   const { taskId } = req.params as z.infer<typeof taskIdParamSchema>;

@@ -1,4 +1,5 @@
 import { Role } from '@prisma/client';
+import { File as MulterFile } from 'multer';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -8,6 +9,7 @@ declare global {
         userId: string;
         role: Role;
       };
+      file?: MulterFile;
     }
   }
 }
