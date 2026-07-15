@@ -120,6 +120,7 @@ CI runs all of the above automatically on every push/PR (see `.github/workflows/
 - [Postman Collection](docs/postman/PTMP.postman_collection.json)
 - [Feature Completion Report](docs/FEATURE_REPORT.md)
 - [CI/CD Explanation](docs/CI_CD.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
 
 ## AI assistance disclosure
 

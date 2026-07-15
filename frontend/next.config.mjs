@@ -2,8 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
   eslint: {
-    // Lint is run explicitly in CI; do not block the production build on lint warnings.
     ignoreDuringBuilds: true,
+  },
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
   },
 };
 
