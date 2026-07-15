@@ -4,7 +4,8 @@ import { use, useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { api, ApiError } from '@/lib/api';
-import { getStoredUser } from '@/lib/auth';
+import { getStoredUser, getToken } from '@/lib/auth';
+import { API_BASE } from '@/lib/api';
 import {
   Project,
   Task,
@@ -166,11 +167,17 @@ export default function ProjectDetailPage() {
   }
 
   async function addAttachment() {
-    if (!selectedTask || !attachForm.filename || !attachForm.url) return;
+    if (!selectedTask || !attachFile) return;
     try {
-      await api.post(`/tasks/${selectedTask.id}/attachments`, attachForm);
+      const form = new FormData();
+      form.append('file', attachFile);
+      await fetch(`${API_BASE}/tasks/${selectedTask.id}/attachments?projectId=${projectId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${getToken()}` },
+        body: form,
+      });
       setShowAttachForm(false);
-      setAttachForm({ filename: '', mimeType: 'image/png', size: 0, url: '' });
+      setAttachFile(null);
       const data = await api.get<{ task: Task }>(`/tasks/${selectedTask.id}`);
       setSelectedTask(data.task);
       setAttachments(data.task.attachments ?? []);
@@ -341,15 +348,15 @@ export default function ProjectDetailPage() {
           attachments={attachments}
           isManager={!!isManager}
           canUpdate={isManager || selectedTask.assigneeId === user?.id}
-          onClose={() => { setSelectedTask(null); setShowAttachForm(false); }}
+          onClose={() => { setSelectedTask(null); setShowAttachForm(false); setAttachFile(null); }}
           onStatus={updateTaskStatus}
           onComment={addComment}
           onAddAttachment={addAttachment}
           onDeleteAttachment={deleteAttachment}
           showAttachForm={showAttachForm}
           setShowAttachForm={setShowAttachForm}
-          attachForm={attachForm}
-          setAttachForm={setAttachForm}
+          attachFile={attachFile}
+          setAttachFile={setAttachFile}
         />
       )}
     </div>
@@ -414,8 +421,8 @@ function TaskDrawer({
   onDeleteAttachment,
   showAttachForm,
   setShowAttachForm,
-  attachForm,
-  setAttachForm,
+  attachFile,
+  setAttachFile,
 }: {
   task: Task;
   comments: Comment[];
@@ -429,8 +436,8 @@ function TaskDrawer({
   onDeleteAttachment: (id: string) => void;
   showAttachForm: boolean;
   setShowAttachForm: (v: boolean) => void;
-  attachForm: { filename: string; mimeType: string; size: number; url: string };
-  setAttachForm: (f: { filename: string; mimeType: string; size: number; url: string }) => void;
+  attachFile: File | null;
+  setAttachFile: (f: File | null) => void;
 }) {
   const [text, setText] = useState('');
   const isOverdue = task.dueDate && new Date(task.dueDate) < new Date() && task.status !== 'DONE';
@@ -491,16 +498,13 @@ function TaskDrawer({
             ) : (
               <form onSubmit={(e) => { e.preventDefault(); onAddAttachment(); }}
                 className="mt-2 flex flex-wrap items-end gap-2 rounded-md bg-slate-50 p-3">
-                <input required placeholder="Filename" value={attachForm.filename}
-                  onChange={(e) => setAttachForm({ ...attachForm, filename: e.target.value })}
-                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                <input required placeholder="URL" value={attachForm.url}
-                  onChange={(e) => setAttachForm({ ...attachForm, url: e.target.value })}
-                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                <input type="number" required placeholder="Size (bytes)" value={attachForm.size}
-                  onChange={(e) => setAttachForm({ ...attachForm, size: parseInt(e.target.value) || 0 })}
-                  className="w-24 rounded-md border border-slate-300 px-2 py-1.5 text-sm" />
-                <button className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700">Save</button>
+                <input
+                  type="file"
+                  accept="application/pdf,image/*"
+                  onChange={(e) => setAttachFile(e.target.files?.[0] ?? null)}
+                  className="flex-1 rounded-md border border-slate-300 px-2 py-1.5 text-sm"
+                />
+                <button className="rounded-md bg-brand-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-brand-700">Upload</button>
               </form>
             )}
           </div>

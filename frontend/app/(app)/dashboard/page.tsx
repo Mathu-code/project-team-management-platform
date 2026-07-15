@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { api, ApiError } from '@/lib/api';
-import { DashboardStats, GlobalAnalytics, ProjectAnalytics, Project, TASK_STATUSES, TASK_PRIORITIES } from '@/lib/types';
+import { DashboardStats, GlobalAnalytics, ProjectAnalytics, Project, TASK_STATUSES, TASK_PRIORITIES, Notification } from '@/lib/types';
 import { Badge } from '@/components/badges';
 
 const labels: Record<string, string> = {
@@ -34,6 +34,7 @@ export default function DashboardPage() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectAnalytics, setProjectAnalytics] = useState<ProjectAnalytics | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,8 @@ export default function DashboardPage() {
         return api.get<GlobalAnalytics>('/dashboard/analytics');
       })
       .then((a) => setAnalytics(a))
+      .then(() => api.get<{ notifications: Notification[] }>('/notifications?limit=5'))
+      .then((n) => setNotifications(n.notifications))
       .catch((e) => setError(e instanceof ApiError ? e.message : 'Failed to load'));
   }, []);
 
