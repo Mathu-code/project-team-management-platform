@@ -39,7 +39,7 @@ export default function ProjectDetailPage() {
   const [sortOrder, setSortOrder] = useState('desc');
   const [showOverdue, setShowOverdue] = useState(false);
   const [showAttachForm, setShowAttachForm] = useState(false);
-  const [attachForm, setAttachForm] = useState({ filename: '', mimeType: 'image/png', size: 0, url: '' });
+  const [attachFile, setAttachFile] = useState<File | null>(null);
 
   const isManager =
     user?.role === 'ADMIN' || project?.createdById === user?.id;
@@ -131,6 +131,7 @@ export default function ProjectDetailPage() {
   async function openTask(task: Task) {
     setSelectedTask(task);
     setShowAttachForm(false);
+    setAttachFile(null);
     try {
       const data = await api.get<{ task: Task }>(`/tasks/${task.id}`);
       setSelectedTask(data.task);
