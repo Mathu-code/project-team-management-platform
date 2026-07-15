@@ -35,7 +35,15 @@ services:
       CORS_ORIGIN: http://localhost:3000
     ports:
       - "4000:4000"
-    command: sh -c "npx prisma migrate deploy && npm start"
+    volumes:
+      - backend_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    command: sh -c "mkdir -p /app/uploads && npx prisma migrate deploy && npm start"
 
   frontend:
     build:
@@ -43,7 +51,8 @@ services:
     container_name: ptmp-frontend
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     environment:
       NEXT_PUBLIC_API_BASE: http://localhost:4000/api
     ports:
@@ -51,3 +60,4 @@ services:
 
 volumes:
   pgdata:
+  backend_uploads:
