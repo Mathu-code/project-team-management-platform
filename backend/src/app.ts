@@ -12,6 +12,7 @@ import apiRoutes from './routes/api.js';
 export function createApp(): Application {
   const app = express();
 
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(
     cors({
@@ -23,6 +24,7 @@ export function createApp(): Application {
   app.use(morgan(env.isProduction ? 'combined' : 'dev'));
 
   console.log(`[ptmp-backend] CORS origins: ${corsOrigins.join(', ') || '(none)'}`);
+  console.log(`[ptmp-backend] DATABASE_URL host: ${(env.DATABASE_URL || '').split('@')[1]?.split('/')[0] || '(missing)'}`);
 
   app.use(
     `${env.API_PREFIX}/auth/login`,
