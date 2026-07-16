@@ -9,6 +9,14 @@ function required(name: string, value: string | undefined): string {
   return value;
 }
 
+function normalizeOrigins(raw: string): string[] {
+  return raw
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => o.replace(/^["']|["']$/g, '').replace(/\/$/, ''));
+}
+
 export const env = {
   NODE_ENV: process.env.NODE_ENV ?? 'development',
   PORT: Number(process.env.PORT ?? 4000),
@@ -20,4 +28,4 @@ export const env = {
   isProduction: (process.env.NODE_ENV ?? 'development') === 'production',
 };
 
-export const corsOrigins = env.CORS_ORIGIN.split(',').map((o) => o.trim());
+export const corsOrigins = normalizeOrigins(env.CORS_ORIGIN);

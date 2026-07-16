@@ -22,6 +22,8 @@ export function createApp(): Application {
   app.use(express.json());
   app.use(morgan(env.isProduction ? 'combined' : 'dev'));
 
+  console.log(`[ptmp-backend] CORS origins: ${corsOrigins.join(', ') || '(none)'}`);
+
   app.use(
     `${env.API_PREFIX}/auth/login`,
     rateLimit({
